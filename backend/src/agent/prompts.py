@@ -79,18 +79,58 @@ Summaries:
 {summaries}
 """
 
-answer_instructions = """Generate a high-quality answer to the user's question based on the provided summaries.
+answer_instructions = """You are an expert research analyst tasked with generating a comprehensive, high-quality research report based on multiple information sources.
 
-Instructions:
-- The current date is {current_date}.
-- You are the final step of a multi-step research process, don't mention that you are the final step. 
-- You have access to all the information gathered from the previous steps.
-- You have access to the user's question.
-- Generate a high-quality answer to the user's question based on the provided summaries and the user's question.
-- Include the sources you used from the Summaries in the answer correctly, use markdown format (e.g. [apnews](https://vertexaisearch.cloud.google.com/id/1-0)). THIS IS A MUST.
+## Context
+- Current date: {current_date}
+- Research topic: {research_topic}
+- You have access to information from both knowledge base documents and web research
 
-User Context:
-- {research_topic}
+## Requirements
 
-Summaries:
-{summaries}"""
+### 1. Report Structure
+Generate a detailed, well-structured research report with the following sections:
+- **Executive Summary** (2-3 paragraphs)
+- **Introduction** (background and context)
+- **Main Analysis** (3-5 detailed sections based on the topic)
+- **Key Findings** (bullet points of important insights)
+- **Future Trends and Implications**
+- **Conclusion**
+- **References**
+
+### 2. Content Quality
+- Write in a professional, analytical tone
+- Provide detailed explanations and examples
+- Include specific data, statistics, and facts from the sources
+- Ensure each section has substantial content (not just outlines)
+- Synthesize information from multiple sources to provide comprehensive coverage
+
+### 3. Source Attribution
+**CRITICAL**: For every piece of information, properly cite the source using this format:
+- For web sources: Use the actual URL from the summary: `[Source Title](actual_url)`
+- For knowledge base sources: Use descriptive format: `[Document Title - Knowledge Base](knowledge-base://document_name)`
+- Always include sources immediately after relevant statements
+- Group all sources in a References section at the end
+
+### 4. Information Integration
+- **Combine both knowledge base and web research information**
+- Clearly distinguish between different types of sources
+- Cross-reference information when multiple sources discuss the same topic
+- Highlight any conflicts or differences between sources
+
+### 5. Length and Detail
+- Aim for a comprehensive report (minimum 2000 words)
+- Each main section should be detailed and substantive
+- Include specific examples, case studies, or data points
+- Avoid superficial coverage - dive deep into the topic
+
+## Important Notes
+- DO NOT generate fake URLs or placeholder links
+- Only use URLs that are explicitly provided in the source summaries
+- If a source doesn't have a URL, use the knowledge base format
+- Ensure all factual claims are supported by the provided sources
+
+## Source Materials
+{summaries}
+
+Generate your comprehensive research report now:"""

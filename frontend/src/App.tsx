@@ -21,6 +21,7 @@ export default function App() {
     initial_search_query_count: number;
     max_research_loops: number;
     reasoning_model: string;
+    rag_resources?: string[];
   }>({
     apiUrl: import.meta.env.DEV
       ? "http://localhost:2024"
@@ -28,17 +29,27 @@ export default function App() {
     assistantId: "agent",
     messagesKey: "messages",
     onUpdateEvent: (event: any) => {
+      console.log("Received event:", event);
+      
       let processedEvent: ProcessedEvent | null = null;
-      if (event.generate_query) {
+      if (event.rag_retrieve) {
+        const numDocs = event.rag_retrieve.rag_documents?.length || 0;
+        processedEvent = {
+          title: "RAG Retrieval", 
+          data: `Retrieved ${numDocs} relevant documents from knowledge base`,
+        };
+      } else if (event.generate_query) {
         processedEvent = {
           title: "Generating Search Queries",
           data: event.generate_query?.search_query?.join(", ") || "",
         };
       } else if (event.web_research) {
+        console.log("Web research event:", event.web_research);
         const sources = event.web_research.sources_gathered || [];
+        console.log("Sources gathered:", sources);
         const numSources = sources.length;
         const uniqueLabels = [
-          ...new Set(sources.map((s: any) => s.label).filter(Boolean)),
+          ...new Set(sources.map((s: any) => s.title).filter(Boolean)),
         ];
         const exampleLabels = uniqueLabels.slice(0, 3).join(", ");
         processedEvent = {
@@ -100,7 +111,7 @@ export default function App() {
   }, [thread.messages, thread.isLoading, processedEventsTimeline]);
 
   const handleSubmit = useCallback(
-    (submittedInputValue: string, effort: string, model: string) => {
+    (submittedInputValue: string, effort: string, model: string, ragResources?: string[]) => {
       if (!submittedInputValue.trim()) return;
       setProcessedEventsTimeline([]);
       hasFinalizeEventOccurredRef.current = false;
@@ -139,6 +150,7 @@ export default function App() {
         initial_search_query_count: initial_search_query_count,
         max_research_loops: max_research_loops,
         reasoning_model: model,
+        rag_resources: ragResources || [],
       });
     },
     [thread]

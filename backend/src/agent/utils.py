@@ -1,21 +1,36 @@
 from typing import Any, Dict, List
-from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
+from langchain_core.messages import AnyMessage, AIMessage, HumanMessage, BaseMessage
 
 
-def get_research_topic(messages: List[AnyMessage]) -> str:
+def get_research_topic(messages: List[BaseMessage]) -> str:
     """
     Get the research topic from the messages.
     """
     # check if request has a history and combine the messages into a single string
     if len(messages) == 1:
-        research_topic = messages[-1].content
+        # Handle both dict and BaseMessage objects
+        if isinstance(messages[-1], dict):
+            content = messages[-1].get("content", "")
+        else:
+            content = messages[-1].content
+        research_topic = str(content) if content else ""
     else:
         research_topic = ""
         for message in messages:
-            if isinstance(message, HumanMessage):
-                research_topic += f"User: {message.content}\n"
-            elif isinstance(message, AIMessage):
-                research_topic += f"Assistant: {message.content}\n"
+            # Handle both dict and BaseMessage objects
+            if isinstance(message, dict):
+                content = str(message.get("content", ""))
+                role = message.get("role", "")
+                if role == "user":
+                    research_topic += f"User: {content}\n"
+                elif role == "assistant":
+                    research_topic += f"Assistant: {content}\n"
+            else:
+                content = str(message.content) if message.content else ""
+                if isinstance(message, HumanMessage):
+                    research_topic += f"User: {content}\n"
+                elif isinstance(message, AIMessage):
+                    research_topic += f"Assistant: {content}\n"
     return research_topic
 
 

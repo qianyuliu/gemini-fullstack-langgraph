@@ -5,38 +5,53 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 
 
+def get_default_model():
+    """Get the default model based on available API keys."""
+    # Check for DeepSeek
+    if os.getenv("DEEPSEEK_API_KEY"):
+        return "deepseek-chat"
+    # Check for 智谱AI
+    elif os.getenv("ZHIPUAI_API_KEY"):
+        return "glm-4"
+    # Check for 阿里千问
+    elif os.getenv("QWEN_API_KEY"):
+        return "qwen-turbo"
+    # Check for OpenAI
+    elif os.getenv("OPENAI_API_KEY"):
+        return "gpt-4"
+    # Check for custom model
+    elif os.getenv("LLM_API_KEY") and os.getenv("LLM_BASE_URL"):
+        return os.getenv("LLM_MODEL_NAME", "custom-model")
+    else:
+        return "deepseek-chat"  # Default fallback
+
+
 class Configuration(BaseModel):
     """The configuration for the agent."""
 
     query_generator_model: str = Field(
-        default="gemini-2.0-flash",
-        metadata={
-            "description": "The name of the language model to use for the agent's query generation."
-        },
+        default_factory=get_default_model,
+        description="The name of the language model to use for the agent's query generation."
     )
 
     reflection_model: str = Field(
-        default="gemini-2.5-flash",
-        metadata={
-            "description": "The name of the language model to use for the agent's reflection."
-        },
+        default_factory=get_default_model,
+        description="The name of the language model to use for the agent's reflection."
     )
 
     answer_model: str = Field(
-        default="gemini-2.5-pro",
-        metadata={
-            "description": "The name of the language model to use for the agent's answer."
-        },
+        default_factory=get_default_model,
+        description="The name of the language model to use for the agent's answer."
     )
 
     number_of_initial_queries: int = Field(
         default=3,
-        metadata={"description": "The number of initial search queries to generate."},
+        description="The number of initial search queries to generate."
     )
 
     max_research_loops: int = Field(
         default=2,
-        metadata={"description": "The maximum number of research loops to perform."},
+        description="The maximum number of research loops to perform."
     )
 
     @classmethod

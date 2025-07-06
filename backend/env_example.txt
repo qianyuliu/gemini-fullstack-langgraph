@@ -1,0 +1,22 @@
+# RAG 配置
+RAG_PROVIDER=ragflow
+RAGFLOW_API_URL=http://localhost:9380
+RAGFLOW_API_KEY=your_ragflow_api_key
+
+# LLM API 密钥配置
+# 至少需要配置一个 LLM 提供商的 API 密钥
+
+# DeepSeek API
+DEEPSEEK_API_KEY=your_deepseek_api_key
+
+# 智谱 AI API
+ZHIPUAI_API_KEY=your_zhipuai_api_key
+
+# 通义千问 API
+QWEN_API_KEY=your_qwen_api_key
+
+# OpenAI API
+OPENAI_API_KEY=your_openai_api_key
+
+# 通用 LLM API 密钥（如果使用其他提供商）
+LLM_API_KEY=your_llm_api_key 

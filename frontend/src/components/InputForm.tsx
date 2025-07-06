@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { SquarePen, Brain, Send, StopCircle, Zap, Cpu } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,13 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RAGResourceSelector } from "./RAGResourceSelector";
 
 // Updated InputFormProps
 interface InputFormProps {
-  onSubmit: (inputValue: string, effort: string, model: string) => void;
+  onSubmit: (inputValue: string, effort: string, model: string, ragResources?: string[]) => void;
   onCancel: () => void;
   isLoading: boolean;
   hasHistory: boolean;
+}
+
+interface ModelOption {
+  id: string;
+  name: string;
+  provider: string;
 }
 
 export const InputForm: React.FC<InputFormProps> = ({
@@ -26,12 +33,53 @@ export const InputForm: React.FC<InputFormProps> = ({
 }) => {
   const [internalInputValue, setInternalInputValue] = useState("");
   const [effort, setEffort] = useState("medium");
-  const [model, setModel] = useState("gemini-2.5-flash-preview-04-17");
+  const [model, setModel] = useState("");
+  const [ragResources, setRagResources] = useState<string[]>([]);
+  const [isRagEnabled, setIsRagEnabled] = useState(false);
+  const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
+
+  // Check if RAG is enabled and fetch available models
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const apiUrl = import.meta.env.DEV
+          ? "http://localhost:2024"
+          : "http://localhost:8123";
+        
+        // Check RAG config
+        const ragResponse = await fetch(`${apiUrl}/api/rag/config`);
+        const ragData = await ragResponse.json();
+        setIsRagEnabled(!!ragData.provider);
+        
+        // Fetch available models
+        const modelsResponse = await fetch(`${apiUrl}/api/models`);
+        const modelsData = await modelsResponse.json();
+        setAvailableModels(modelsData.models || []);
+        
+        // Set default model if models are available
+        if (modelsData.models && modelsData.models.length > 0) {
+          setModel(modelsData.models[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        // Fallback models
+        const fallbackModels = [
+          { id: "deepseek-chat", name: "DeepSeek Chat", provider: "deepseek" },
+          { id: "glm-4", name: "GLM-4", provider: "zhipuai" },
+          { id: "qwen-turbo", name: "Qwen Turbo", provider: "qwen" },
+          { id: "gpt-4", name: "GPT-4", provider: "openai" },
+        ];
+        setAvailableModels(fallbackModels);
+        setModel(fallbackModels[0].id);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleInternalSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!internalInputValue.trim()) return;
-    onSubmit(internalInputValue, effort, model);
+    onSubmit(internalInputValue, effort, model, ragResources);
     setInternalInputValue("");
   };
 
@@ -92,6 +140,14 @@ export const InputForm: React.FC<InputFormProps> = ({
           )}
         </div>
       </div>
+      
+      {/* RAG Resource Selector */}
+      <RAGResourceSelector 
+        selectedResources={ragResources}
+        onResourcesChange={setRagResources}
+        isEnabled={isRagEnabled}
+      />
+      
       <div className="flex items-center justify-between">
         <div className="flex flex-row gap-2">
           <div className="flex flex-row gap-2 bg-neutral-700 border-neutral-600 text-neutral-300 focus:ring-neutral-500 rounded-xl rounded-t-sm pl-2  max-w-[100%] sm:max-w-[90%]">
@@ -135,30 +191,37 @@ export const InputForm: React.FC<InputFormProps> = ({
                 <SelectValue placeholder="Model" />
               </SelectTrigger>
               <SelectContent className="bg-neutral-700 border-neutral-600 text-neutral-300 cursor-pointer">
-                <SelectItem
-                  value="gemini-2.0-flash"
-                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
-                >
-                  <div className="flex items-center">
-                    <Zap className="h-4 w-4 mr-2 text-yellow-400" /> 2.0 Flash
-                  </div>
-                </SelectItem>
-                <SelectItem
-                  value="gemini-2.5-flash-preview-04-17"
-                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
-                >
-                  <div className="flex items-center">
-                    <Zap className="h-4 w-4 mr-2 text-orange-400" /> 2.5 Flash
-                  </div>
-                </SelectItem>
-                <SelectItem
-                  value="gemini-2.5-pro-preview-05-06"
-                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
-                >
-                  <div className="flex items-center">
-                    <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
-                  </div>
-                </SelectItem>
+                {availableModels.map((modelOption) => (
+                  <SelectItem
+                    key={modelOption.id}
+                    value={modelOption.id}
+                    className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                  >
+                    <div className="flex items-center">
+                      {modelOption.provider === "deepseek" && (
+                        <Zap className="h-4 w-4 mr-2 text-blue-400" />
+                      )}
+                      {modelOption.provider === "zhipuai" && (
+                        <Cpu className="h-4 w-4 mr-2 text-green-400" />
+                      )}
+                      {modelOption.provider === "qwen" && (
+                        <Zap className="h-4 w-4 mr-2 text-orange-400" />
+                      )}
+                      {modelOption.provider === "openai" && (
+                        <Zap className="h-4 w-4 mr-2 text-emerald-400" />
+                      )}
+                      {modelOption.provider === "custom" && (
+                        <Cpu className="h-4 w-4 mr-2 text-purple-400" />
+                      )}
+                      {modelOption.name}
+                    </div>
+                  </SelectItem>
+                ))}
+                {availableModels.length === 0 && (
+                  <SelectItem value="no-models" disabled>
+                    No models available
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
