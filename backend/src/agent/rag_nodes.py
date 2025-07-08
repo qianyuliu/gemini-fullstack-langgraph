@@ -126,16 +126,44 @@ def rag_fallback_to_web(state) -> str:
     """
     rag_documents = state.get("rag_documents", [])
     
-    # If no RAG documents were retrieved and fallback is enabled
-    if not rag_documents and rag_config.enable_fallback:
-        logger.info("No RAG documents found, falling back to web research")
+    # Check if this is a continue_research iteration
+    research_loop_count = state.get("research_loop_count", 0) or 0
+    is_continue_research = research_loop_count > 0
+    
+    # If this is a continue_research iteration, always do web search for comprehensive coverage
+    if is_continue_research:
+        logger.info("Continue research iteration - always performing web search for comprehensive coverage")
         return "web_research"
     
-    # If we have RAG documents, proceed to reflection
+    # For initial research: always do web search if fallback is enabled (regardless of RAG success)
+    # This ensures comprehensive information gathering from both RAG and web sources
+    if rag_config.enable_fallback:
+        if rag_documents:
+            logger.info("RAG documents found, but also performing web search for comprehensive coverage")
+        else:
+            logger.info("No RAG documents found, falling back to web research")
+        return "web_research"
+    
+    # If fallback is disabled, use original logic
     if rag_documents:
-        logger.info("RAG documents found, proceeding to reflection")
+        logger.info("RAG documents found, proceeding to reflection (fallback disabled)")
         return "reflection"
     
-    # If fallback is disabled, still proceed to reflection
-    logger.info("RAG fallback is disabled, proceeding to reflection")
-    return "reflection" 
+    # If no RAG documents and fallback disabled, still proceed to reflection
+    logger.info("No RAG documents and fallback disabled, proceeding to reflection")
+    return "reflection"
+
+
+def continue_research_rag_to_web(state) -> str:
+    """Routing function specifically for continue_research iterations.
+    
+    Always performs web search after RAG to ensure comprehensive coverage.
+    
+    Args:
+        state: Current state
+        
+    Returns:
+        Always returns "web_research" for comprehensive research coverage
+    """
+    logger.info("Continue research: performing web search after RAG for comprehensive coverage")
+    return "web_research" 

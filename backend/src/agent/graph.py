@@ -498,7 +498,15 @@ def build_graph():
     )
     
     # Continue research goes back to web research (not RAG, to avoid loops)
-    workflow.add_edge("continue_research", "web_research")
+    workflow.add_conditional_edges(
+        "continue_research",
+        should_use_rag,
+        {
+            "rag_retrieve": "rag_retrieve",
+            "web_research": "web_research",
+        }
+    )
+    
     workflow.add_edge("finalize_answer", END)
 
     return workflow.compile()
