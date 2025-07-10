@@ -54,6 +54,11 @@ class Configuration(BaseModel):
         description="The maximum number of research loops to perform."
     )
 
+    max_tokens: int = Field(
+        default=8192,  # Increased for long report generation
+        description="The maximum number of tokens to generate in responses."
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None

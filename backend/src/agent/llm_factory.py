@@ -5,6 +5,7 @@ from typing import Optional
 from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models import ChatZhipuAI
+from pydantic import SecretStr
 
 
 class LLMFactory:
@@ -15,6 +16,7 @@ class LLMFactory:
         model_name: str, 
         temperature: float = 0.7, 
         max_retries: int = 2,
+        max_tokens: Optional[int] = None,
         **kwargs
     ) -> BaseLanguageModel:
         """Create an LLM instance based on the model name.
@@ -23,6 +25,7 @@ class LLMFactory:
             model_name: The name of the model (e.g., 'deepseek-chat', 'glm-4', 'gpt-4')
             temperature: Temperature for generation
             max_retries: Maximum number of retries
+            max_tokens: Maximum number of tokens to generate
             **kwargs: Additional arguments
             
         Returns:
@@ -30,7 +33,7 @@ class LLMFactory:
         """
         # DeepSeek models
         if model_name.startswith("deepseek"):
-            return LLMFactory._create_deepseek_llm(model_name, temperature, max_retries, **kwargs)
+            return LLMFactory._create_deepseek_llm(model_name, temperature, max_retries, max_tokens, **kwargs)
         
         # 智谱AI models
         elif model_name.startswith("glm"):
@@ -49,20 +52,30 @@ class LLMFactory:
             return LLMFactory._create_openai_compatible_llm(model_name, temperature, max_retries, **kwargs)
     
     @staticmethod
-    def _create_deepseek_llm(model_name: str, temperature: float, max_retries: int, **kwargs) -> ChatOpenAI:
+    def _create_deepseek_llm(model_name: str, temperature: float, max_retries: int, max_tokens: Optional[int], **kwargs) -> ChatOpenAI:
         """Create DeepSeek LLM instance."""
         api_key = os.getenv("DEEPSEEK_API_KEY")
         if not api_key:
             raise ValueError("DEEPSEEK_API_KEY environment variable is required for DeepSeek models")
         
-        return ChatOpenAI(
-            model=model_name,
-            api_key=api_key,
-            base_url="https://api.deepseek.com",
-            temperature=temperature,
-            max_retries=max_retries,
-            **kwargs
-        )
+        # Get max_tokens from environment or kwargs
+        max_tokens = max_tokens or int(os.getenv("DEEPSEEK_MAX_TOKENS", "4096"))
+        
+        # Build kwargs with max_tokens if provided
+        openai_kwargs = {
+            "model": model_name,
+            "api_key": SecretStr(api_key),
+            "base_url": "https://api.deepseek.com",
+            "temperature": temperature,
+            "max_retries": max_retries,
+            **{k: v for k, v in kwargs.items() if k != 'max_tokens'}
+        }
+        
+        # Add max_tokens only if it's provided and not None
+        if max_tokens is not None:
+            openai_kwargs["max_tokens"] = max_tokens
+            
+        return ChatOpenAI(**openai_kwargs)
     
     @staticmethod
     def _create_zhipu_llm(model_name: str, temperature: float, max_retries: int, **kwargs) -> ChatZhipuAI:
@@ -71,12 +84,14 @@ class LLMFactory:
         if not api_key:
             raise ValueError("ZHIPUAI_API_KEY environment variable is required for ZhipuAI models")
         
+        # Filter out unsupported parameters for ChatZhipuAI
+        supported_kwargs = {k: v for k, v in kwargs.items() if k not in ['max_tokens', 'max_retries']}
+        
         return ChatZhipuAI(
             model=model_name,
             api_key=api_key,
             temperature=temperature,
-            max_retries=max_retries,
-            **kwargs
+            **supported_kwargs
         )
     
     @staticmethod
@@ -86,14 +101,21 @@ class LLMFactory:
         if not api_key:
             raise ValueError("QWEN_API_KEY environment variable is required for Qwen models")
         
-        return ChatOpenAI(
-            model=model_name,
-            api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            temperature=temperature,
-            max_retries=max_retries,
-            **kwargs
-        )
+        # Build kwargs with max_tokens if provided
+        qwen_kwargs = {
+            "model": model_name,
+            "api_key": api_key,
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "temperature": temperature,
+            "max_retries": max_retries,
+            **{k: v for k, v in kwargs.items() if k != 'max_tokens'}
+        }
+        
+        # Add max_tokens only if it's provided and not None
+        if kwargs.get('max_tokens') is not None:
+            qwen_kwargs["max_tokens"] = kwargs.get('max_tokens')
+            
+        return ChatOpenAI(**qwen_kwargs)
     
     @staticmethod
     def _create_openai_llm(model_name: str, temperature: float, max_retries: int, **kwargs) -> ChatOpenAI:
@@ -104,7 +126,7 @@ class LLMFactory:
         
         return ChatOpenAI(
             model=model_name,
-            api_key=api_key,
+            api_key=SecretStr(api_key),
             temperature=temperature,
             max_retries=max_retries,
             **kwargs
@@ -123,7 +145,7 @@ class LLMFactory:
         
         return ChatOpenAI(
             model=model_name,
-            api_key=api_key,
+            api_key=SecretStr(api_key),
             base_url=base_url,
             temperature=temperature,
             max_retries=max_retries,

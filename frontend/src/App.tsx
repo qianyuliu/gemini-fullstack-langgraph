@@ -69,6 +69,38 @@ export default function App() {
           data: "Composing and presenting the final answer.",
         };
         hasFinalizeEventOccurredRef.current = true;
+      } else if (event.detect_long_report) {
+        const isLongReport = event.detect_long_report.is_long_report;
+        const targetWords = event.detect_long_report.target_word_count;
+        processedEvent = {
+          title: "Report Type Detection",
+          data: `Detected ${isLongReport ? `long report request with ${targetWords} words target` : 'standard query'}`,
+        };
+      } else if (event.generate_report_plan) {
+        const plan = event.generate_report_plan.report_plan;
+        const sectionCount = plan?.sections?.length || 0;
+        processedEvent = {
+          title: "Report Planning",
+          data: `Generated report plan with ${sectionCount} sections targeting ${plan?.total_word_count_target || 'unknown'} words`,
+        };
+      } else if (event.process_section) {
+        const sectionIndex = event.process_section.current_section_index;
+        const totalSections = event.process_section.total_sections;
+        const sectionName = event.process_section.section_name;
+        const sectionDescription = event.process_section.section_description;
+        const completedCount = event.process_section.sections_completed_count || 0;
+        
+        processedEvent = {
+          title: `Section ${sectionIndex + 1}/${totalSections}: ${sectionName || 'Processing'}`,
+          data: `Completed: ${completedCount}/${totalSections} sections. Current: ${sectionDescription || 'Working...'}`,
+        };
+      } else if (event.compile_report) {
+        const completedSections = event.compile_report.completed_sections?.length || 0;
+        processedEvent = {
+          title: "Compiling Final Report",
+          data: `Compiling final report from ${completedSections} completed sections`,
+        };
+        hasFinalizeEventOccurredRef.current = true;
       }
       if (processedEvent) {
         setProcessedEventsTimeline((prevEvents) => [

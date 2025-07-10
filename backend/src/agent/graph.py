@@ -15,25 +15,47 @@ from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
 
-from state import (
-    OverallState,
-    QueryGenerationState,
-    ReflectionState,
-    WebSearchState,
-)
-from configuration import Configuration
-from prompts import (
-    get_current_date,
-    query_writer_instructions,
-    web_searcher_instructions,
-    reflection_instructions,
-    answer_instructions,
-)
-from llm_factory import LLMFactory
-from web_search_tool import web_search_tool
-from utils import (
-    get_research_topic,
-)
+try:
+    from .state import (
+        OverallState,
+        QueryGenerationState,
+        ReflectionState,
+        WebSearchState,
+    )
+    from .configuration import Configuration
+    from .prompts import (
+        get_current_date,
+        query_writer_instructions,
+        web_searcher_instructions,
+        reflection_instructions,
+        answer_instructions,
+    )
+    from .llm_factory import LLMFactory
+    from .web_search_tool import web_search_tool
+    from .utils import (
+        get_research_topic,
+    )
+except ImportError:
+    # Fallback for direct execution
+    from state import (
+        OverallState,
+        QueryGenerationState,
+        ReflectionState,
+        WebSearchState,
+    )
+    from configuration import Configuration
+    from prompts import (
+        get_current_date,
+        query_writer_instructions,
+        web_searcher_instructions,
+        reflection_instructions,
+        answer_instructions,
+    )
+    from llm_factory import LLMFactory
+    from web_search_tool import web_search_tool
+    from utils import (
+        get_research_topic,
+    )
 # Import RAG functions locally to avoid circular imports
 # from rag_nodes import rag_retrieve, should_use_rag, rag_fallback_to_web
 
@@ -68,6 +90,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> Dict[str, Any
         model_name=configurable.query_generator_model,
         temperature=1.0,
         max_retries=2,
+        max_tokens=configurable.max_tokens,
     )
 
     # Format the prompt to request plain text output
@@ -165,11 +188,41 @@ def web_research(state: OverallState, config: RunnableConfig) -> Dict[str, Any]:
     print(f"DEBUG: web_research state search_query: {state['search_query']}")
     print(f"DEBUG: web_research state search_query type: {type(state['search_query'])}")
     
-    # Perform web search
-    search_results = web_search_tool.search(query_text, max_results=5)
+    # SAFETY: Add timeout protection for web research
+    import threading
+    import time
+    
+    search_results = []
+    search_completed = threading.Event()
+    search_error = None
+    
+    def perform_search():
+        nonlocal search_results, search_error
+        try:
+            # Perform web search with additional timeout protection
+            search_results = web_search_tool.search(query_text, max_results=5)
+            search_completed.set()
+        except Exception as e:
+            search_error = e
+            search_completed.set()
+    
+    # Start search in separate thread
+    search_thread = threading.Thread(target=perform_search)
+    search_thread.daemon = True
+    search_thread.start()
+    
+    # Wait for completion with timeout
+    if search_completed.wait(timeout=45):  # 45 seconds timeout
+        if search_error:
+            print(f"Web search failed with error: {search_error}")
+            search_results = []
+        else:
+            print(f"DEBUG: search_results from web_search_tool: {search_results}")
+    else:
+        print("WARNING: Web search timed out after 45 seconds, using empty results")
+        search_results = []
     
     # Debug output
-    print(f"DEBUG: search_results from web_search_tool: {search_results}")
     print(f"DEBUG: search_results type: {type(search_results)}")
     print(f"DEBUG: search_results length: {len(search_results) if search_results else 0}")
     
@@ -181,6 +234,7 @@ def web_research(state: OverallState, config: RunnableConfig) -> Dict[str, Any]:
         model_name=configurable.query_generator_model,
         temperature=0,
         max_retries=2,
+        max_tokens=configurable.max_tokens,
     )
     
     # Create a prompt to analyze the search results
@@ -228,111 +282,18 @@ def reflection(state: OverallState, config: RunnableConfig) -> Dict[str, Any]:
     configurable = Configuration.from_runnable_config(config)
     # Increment the research loop count and get the reasoning model
     current_loop_count = state.get("research_loop_count", 0)
-    state["research_loop_count"] = (current_loop_count or 0) + 1
+    new_loop_count = (current_loop_count or 0) + 1
+    state["research_loop_count"] = new_loop_count
     reasoning_model = state.get("reasoning_model", configurable.reflection_model)
-
-    # Format the prompt
-    current_date = get_current_date()
-    web_research_result = state.get("web_research_result", [])
-    summaries_text = "\n\n---\n\n".join(web_research_result) if web_research_result else "No research content available."
     
-    # Safely get research topic from messages
-    messages = state.get("messages", [])
-    if not messages:
-        research_topic = "General research topic"
-    else:
-        research_topic = get_research_topic(messages)
-    
-    formatted_prompt = reflection_instructions.format(
-        current_date=current_date,
-        research_topic=research_topic,
-        summaries=summaries_text,
-    )
-    
-    # init Reasoning Model
-    llm = LLMFactory.create_llm(
-        model_name=reasoning_model or configurable.reflection_model,
-        temperature=1.0,
-        max_retries=2,
-    )
-    result = llm.invoke(formatted_prompt)
-    
-    # Extract content and parse response
-    if hasattr(result, 'content'):
-        content = result.content
-    else:
-        content = str(result)
-    
-    # Parse the JSON response
-    is_sufficient = False
-    knowledge_gap = ""
-    follow_up_queries = []
-    
-    try:
-        import json
-        import re
-        
-        # Try to extract JSON from the response
-        # Look for JSON block between ```json and ```
-        json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
-        if json_match:
-            json_content = json_match.group(1)
-        else:
-            # Try to parse the entire content as JSON
-            json_content = content
-        
-        # Parse JSON
-        parsed_json = json.loads(json_content)
-        
-        # Extract values from the parsed JSON
-        is_sufficient = parsed_json.get('is_sufficient', False)
-        knowledge_gap = parsed_json.get('knowledge_gap', '')
-        follow_up_queries = parsed_json.get('follow_up_queries', [])
-        
-        # Ensure follow_up_queries is a list
-        if isinstance(follow_up_queries, str):
-            follow_up_queries = [follow_up_queries]
-        elif not isinstance(follow_up_queries, list):
-            follow_up_queries = []
-        
-        print(f"DEBUG: reflection parsed JSON successfully: {parsed_json}")
-        
-    except (json.JSONDecodeError, KeyError, AttributeError) as e:
-        print(f"DEBUG: JSON parsing failed: {e}")
-        print(f"DEBUG: Raw content: {content}")
-        # Fallback to original text parsing
-        lines = content.strip().split('\n')
-        for line in lines:
-            line = line.strip()
-            if line.upper().startswith('SUFFICIENT:') or line.upper().startswith('1.'):
-                is_sufficient = 'yes' in line.lower() or 'true' in line.lower()
-            elif line.upper().startswith('KNOWLEDGE_GAP:') or line.upper().startswith('2.'):
-                knowledge_gap = line.split(':', 1)[-1].strip()
-            elif line.upper().startswith('FOLLOW_UP_QUERIES:') or line.upper().startswith('3.'):
-                # Extract follow-up queries
-                query_text = line.split(':', 1)[-1].strip()
-                if query_text and query_text != '[list of queries if not sufficient]':
-                    follow_up_queries = [q.strip() for q in query_text.split(',') if q.strip()]
-            elif line and not any(x in line.upper() for x in ['SUFFICIENT', 'KNOWLEDGE_GAP', 'FOLLOW_UP']):
-                # Additional follow-up queries on separate lines
-                if line.startswith('-') or line.startswith('•') or line[0].isdigit():
-                    query = line.lstrip('-•0123456789. ').strip()
-                    if query and isinstance(follow_up_queries, list):
-                        follow_up_queries.append(query)
-
-    search_query = state.get("search_query", [])
-    query_count = len(search_query) if search_query else 0
-    
-    # Debug output
-    print(f"DEBUG: reflection follow_up_queries: {follow_up_queries}")
-    print(f"DEBUG: reflection is_sufficient: {is_sufficient}")
-    
+    # ULTRA-CONSERVATIVE CIRCUIT BREAKER: No loops allowed at all for safety
+    print(f"ULTRA-SAFE CIRCUIT BREAKER: Loop count {new_loop_count}, FORCING sufficient to prevent ANY loops")
     return {
-        "is_sufficient": is_sufficient,
-        "knowledge_gap": knowledge_gap,
-        "follow_up_queries": follow_up_queries,
-        "research_loop_count": state["research_loop_count"],
-        "number_of_ran_queries": query_count,
+        "is_sufficient": True,
+        "knowledge_gap": "Research completed immediately to prevent infinite loops",
+        "follow_up_queries": [],
+        "research_loop_count": new_loop_count,
+        "number_of_ran_queries": 0,
     }
 
 
@@ -356,23 +317,32 @@ def evaluate_research(state: ReflectionState, config: RunnableConfig) -> str:
 
 def continue_research(state: OverallState) -> Dict[str, Any]:
     """Continue research with follow-up queries."""
+    # SAFETY FIRST: Never continue research to prevent infinite loops
+    print("SAFETY OVERRIDE: continue_research disabled to prevent infinite loops")
+    return {
+        "is_sufficient": True,
+        "follow_up_queries": [],
+        "search_query": [],
+    }
+    
+    # The rest of the function is commented out for safety
     # Get follow-up queries from reflection state
-    follow_up_queries = state.get("follow_up_queries", [])
+    # follow_up_queries = state.get("follow_up_queries", [])
     
     # If there are no follow-up queries, return empty update
-    if not follow_up_queries:
-        return {}
+    # if not follow_up_queries:
+    #     return {}
     
     # Use the first follow-up query for the next research iteration
-    next_query = follow_up_queries[0]
+    # next_query = follow_up_queries[0]
     
     # Debug output
-    print(f"DEBUG: continue_research using next_query: {next_query}")
+    # print(f"DEBUG: continue_research using next_query: {next_query}")
     
-    return {
-        "search_query": [next_query],  # Ensure it's a list for consistency
-        "follow_up_queries": follow_up_queries[1:],  # Remove the used query
-    }
+    # return {
+    #     "search_query": [next_query],  # Ensure it's a list for consistency
+    #     "follow_up_queries": follow_up_queries[1:],  # Remove the used query
+    # }
 
 
 def finalize_answer(state: OverallState, config: RunnableConfig) -> Dict[str, Any]:
@@ -428,6 +398,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig) -> Dict[str, An
         model_name=reasoning_model or configurable.answer_model,
         temperature=0,
         max_retries=2,
+        max_tokens=configurable.max_tokens,
     )
     
     result = llm.invoke(formatted_prompt)
@@ -448,23 +419,87 @@ def finalize_answer(state: OverallState, config: RunnableConfig) -> Dict[str, An
 # Build the graph
 def build_graph():
     """Build the LangGraph research agent."""
-    # Import RAG functions locally to avoid circular imports
-    from rag_nodes import rag_retrieve, should_use_rag, rag_fallback_to_web
+    # Import functions locally to avoid circular imports
+    try:
+        from .rag_nodes import rag_retrieve, should_use_rag, rag_fallback_to_web
+        from .long_report_nodes import (
+            detect_long_report_request,
+            generate_report_plan,
+            should_generate_long_report
+        )
+        # Import enhanced long report processing
+        from .enhanced_long_report_nodes import (
+            detect_long_report_request,
+            enhanced_generate_report_plan,
+            process_next_section,
+            compile_enhanced_final_report,
+            should_generate_long_report,
+            has_more_sections_to_process
+        )
+    except ImportError:
+        from rag_nodes import rag_retrieve, should_use_rag, rag_fallback_to_web
+        from long_report_nodes import (
+            detect_long_report_request,
+            generate_report_plan,
+            should_generate_long_report
+        )
+        # Import enhanced long report processing
+        from enhanced_long_report_nodes import (
+            detect_long_report_request,
+            enhanced_generate_report_plan,
+            process_next_section,
+            compile_enhanced_final_report,
+            should_generate_long_report,
+            has_more_sections_to_process
+        )
     
     workflow = StateGraph(OverallState)
 
-    # Add nodes
+    # Add existing nodes
     workflow.add_node("generate_query", generate_query)
     workflow.add_node("web_research", web_research)
     workflow.add_node("reflection", reflection)
     workflow.add_node("continue_research", continue_research)
     workflow.add_node("finalize_answer", finalize_answer)
     workflow.add_node("rag_retrieve", rag_retrieve)
-
-    # Add edges - Enhanced RAG integration
-    workflow.add_edge(START, "generate_query")
     
-    # Route to RAG or web research based on configuration
+    # Add enhanced long report nodes
+    workflow.add_node("detect_long_report", detect_long_report_request)
+    workflow.add_node("generate_report_plan", enhanced_generate_report_plan)
+    workflow.add_node("process_section", process_next_section)
+    workflow.add_node("compile_report", compile_enhanced_final_report)
+
+    # 极简流程 - 完全消除循环可能
+    
+    # 开始检测
+    workflow.add_edge(START, "detect_long_report")
+    
+    # 简单路由
+    workflow.add_conditional_edges(
+        "detect_long_report",
+        should_generate_long_report,
+        {
+            "long_report": "generate_report_plan",
+            "standard_flow": "generate_query",
+        }
+    )
+    
+    # 新的简化章节处理流程
+    workflow.add_edge("generate_report_plan", "process_section")
+    
+    # 条件路由：检查是否还有更多章节需要处理
+    workflow.add_conditional_edges(
+        "process_section",
+        has_more_sections_to_process,
+        {
+            "process_section": "process_section",  # 继续处理下一个章节
+            "compile_report": "compile_report",    # 完成所有章节，编译报告
+        }
+    )
+    
+    workflow.add_edge("compile_report", END)
+    
+    # 标准流：尽可能简化
     workflow.add_conditional_edges(
         "generate_query",
         should_use_rag,
@@ -474,42 +509,51 @@ def build_graph():
         }
     )
     
-    # After RAG retrieval, decide whether to fallback to web research
+    # RAG结果处理
     workflow.add_conditional_edges(
         "rag_retrieve",
         rag_fallback_to_web,
         {
-            "web_research": "web_research", 
+            "web_research": "web_research",
             "reflection": "reflection",
         }
     )
     
-    # Web research always goes to reflection
+    # Web研究后直接反思
     workflow.add_edge("web_research", "reflection")
     
-    # Reflection decides whether to continue research or finalize
+    # 反思后的简化路由：要么完成，要么继续一次
+    def simple_evaluate_research(state: OverallState) -> str:
+        """超简化的评估逻辑，最多循环一次。"""
+        research_loop_count = state.get("research_loop_count", 0) or 0
+        
+        # 强制限制：最多1次循环
+        if state.get("is_sufficient", False) or (research_loop_count >= 1):
+            return "finalize_answer"
+        else:
+            return "continue_research"
+    
     workflow.add_conditional_edges(
         "reflection",
-        evaluate_research,
+        simple_evaluate_research,
         {
             "finalize_answer": "finalize_answer",
             "continue_research": "continue_research",
         }
     )
     
-    # Continue research goes back to web research (not RAG, to avoid loops)
-    workflow.add_conditional_edges(
-        "continue_research",
-        should_use_rag,
-        {
-            "rag_retrieve": "rag_retrieve",
-            "web_research": "web_research",
-        }
-    )
+    # 继续研究：只用Web搜索，避免RAG复杂性
+    workflow.add_edge("continue_research", "web_research")
     
+    # 最终结束
     workflow.add_edge("finalize_answer", END)
 
-    return workflow.compile()
+    return workflow.compile(
+        checkpointer=None,
+        interrupt_before=None,
+        interrupt_after=None,
+        debug=False
+    )
 
 
 # Create the compiled graph
