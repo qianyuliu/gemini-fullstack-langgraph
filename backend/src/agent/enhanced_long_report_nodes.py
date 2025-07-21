@@ -197,7 +197,11 @@ def enhanced_generate_report_plan(state: OverallState, config: RunnableConfig) -
             "completed_sections": [],
             "sections_completed_count": 0,  # Initialize completed count
             "total_sections": len(sections),  # Initialize total sections for frontend
-            "next_section_index": None  # No next section initially
+            "next_section_index": None,  # No next section initially
+            # Send generate_report_plan event to frontend
+            "generate_report_plan": {
+                "report_plan": report_plan
+            }
         }
         
     except Exception as e:
@@ -245,7 +249,11 @@ def enhanced_generate_report_plan(state: OverallState, config: RunnableConfig) -
             "completed_sections": [],
             "sections_completed_count": 0,  # Initialize completed count
             "total_sections": len(fallback_sections),  # Initialize total sections for frontend
-            "next_section_index": None  # No next section initially
+            "next_section_index": None,  # No next section initially
+            # Send generate_report_plan event to frontend
+            "generate_report_plan": {
+                "report_plan": fallback_plan
+            }
         }
 
 
@@ -323,9 +331,18 @@ def process_next_section(state: OverallState, config: RunnableConfig) -> Dict[st
     logger.info(f"Sending to frontend: Section {section_index_to_process + 1}/{len(report_plan.sections)}: {current_section.name}")
     logger.info(f"Frontend will display: Completed: {sections_completed_count}/{len(report_plan.sections)} sections")
     
-    # CRITICAL: Ensure no messages are sent during section processing
-    # Only return state updates, never messages during intermediate steps
-    return result_update
+    # CRITICAL: Send process_section event to frontend
+    # The event key must match what frontend expects
+    return {
+        **result_update,  # Include all state updates
+        "process_section": {  # This is the event key that frontend listens for
+            "current_section_index": section_index_to_process,
+            "total_sections": len(report_plan.sections),
+            "sections_completed_count": sections_completed_count,
+            "section_name": current_section.name,
+            "section_description": current_section.description
+        }
+    }
 
 
 def generate_section_research_queries(section: ReportSection, state: OverallState, config: RunnableConfig) -> List[str]:

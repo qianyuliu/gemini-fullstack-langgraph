@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Display Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #262626;
+            color: #e5e5e5;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #404040;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #525252;
+            border-radius: 6px;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #f5f5f5;
+        }
+        .test-content {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #d4d4d4;
+        }
+        .markdown-content {
+            background-color: #404040;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #3b82f6;
+        }
+        .markdown-content strong {
+            color: #f5f5f5;
+            font-weight: 600;
+        }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            color: #f5f5f5;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 20px;
+        }
+        .markdown-content li {
+            margin-bottom: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Frontend Display Test - 长报告章节大纲显示</h1>
+        
+        <div class="test-section">
+            <div class="test-title">1. 报告计划生成事件</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    Generated report plan with 4 sections targeting 14000 words
+
+                    **章节大纲：**
+
+                    1. **引言** (2000字) 🔍 需研究
+                      介绍研究背景和目标
+
+                    2. **文献综述** (4000字) 🔍 需研究
+                      相关研究和理论基础
+
+                    3. **核心分析** (6000字) 🔍 需研究
+                      主要内容分析
+
+                    4. **总结** (2000字) 📝 直接生成
+                      总结要点和结论
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">2. 章节处理事件</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    **引言**
+                    介绍研究背景和目标
+
+                    **进度：** 1/4 章节已完成
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">3. 报告编译事件</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    Compiling final report from 4 completed sections
+
+                    **报告统计：**
+                    - 总字符数：15,234
+                    - 完成章节：4
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">4. 模拟实际数据</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <h3>测试数据</h3>
+                    <p>这是一个模拟的章节大纲显示测试，验证前端能否正确渲染markdown格式的内容。</p>
+                    
+                    <h4>章节列表：</h4>
+                    <ol>
+                        <li><strong>第一章</strong> - 背景介绍 (1500字)</li>
+                        <li><strong>第二章</strong> - 文献综述 (3000字)</li>
+                        <li><strong>第三章</strong> - 方法分析 (4000字)</li>
+                        <li><strong>第四章</strong> - 结果讨论 (3500字)</li>
+                        <li><strong>第五章</strong> - 结论展望 (2000字)</li>
+                    </ol>
+                    
+                    <p><em>注意：</em> 这个测试页面模拟了前端ActivityTimeline组件的显示效果。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

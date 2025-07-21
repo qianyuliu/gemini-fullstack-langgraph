@@ -17,6 +17,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 export interface ProcessedEvent {
   title: string;
@@ -27,6 +28,60 @@ interface ActivityTimelineProps {
   processedEvents: ProcessedEvent[];
   isLoading: boolean;
 }
+
+// Markdown components for timeline
+const timelineMdComponents = {
+  h1: ({ className, children, ...props }: any) => (
+    <h1 className="text-sm font-bold mt-2 mb-1 text-neutral-200" {...props}>
+      {children}
+    </h1>
+  ),
+  h2: ({ className, children, ...props }: any) => (
+    <h2 className="text-xs font-semibold mt-1 mb-1 text-neutral-200" {...props}>
+      {children}
+    </h2>
+  ),
+  h3: ({ className, children, ...props }: any) => (
+    <h3 className="text-xs font-medium mt-1 mb-0.5 text-neutral-200" {...props}>
+      {children}
+    </h3>
+  ),
+  p: ({ className, children, ...props }: any) => (
+    <p className="text-xs text-neutral-300 leading-relaxed mb-1" {...props}>
+      {children}
+    </p>
+  ),
+  ul: ({ className, children, ...props }: any) => (
+    <ul className="list-disc pl-4 mb-2 text-xs text-neutral-300" {...props}>
+      {children}
+    </ul>
+  ),
+  ol: ({ className, children, ...props }: any) => (
+    <ol className="list-decimal pl-4 mb-2 text-xs text-neutral-300" {...props}>
+      {children}
+    </ol>
+  ),
+  li: ({ className, children, ...props }: any) => (
+    <li className="mb-0.5 text-xs text-neutral-300" {...props}>
+      {children}
+    </li>
+  ),
+  strong: ({ className, children, ...props }: any) => (
+    <strong className="font-semibold text-neutral-200" {...props}>
+      {children}
+    </strong>
+  ),
+  em: ({ className, children, ...props }: any) => (
+    <em className="italic text-neutral-300" {...props}>
+      {children}
+    </em>
+  ),
+  code: ({ className, children, ...props }: any) => (
+    <code className="bg-neutral-800 rounded px-1 py-0.5 font-mono text-xs text-neutral-300" {...props}>
+      {children}
+    </code>
+  ),
+};
 
 export function ActivityTimeline({
   processedEvents,
@@ -48,6 +103,12 @@ export function ActivityTimeline({
       return <Search className="h-4 w-4 text-neutral-400" />;
     } else if (title.toLowerCase().includes("finalizing")) {
       return <Pen className="h-4 w-4 text-neutral-400" />;
+    } else if (title.toLowerCase().includes("planning")) {
+      return <Brain className="h-4 w-4 text-blue-400" />;
+    } else if (title.toLowerCase().includes("section")) {
+      return <Pen className="h-4 w-4 text-green-400" />;
+    } else if (title.toLowerCase().includes("compiling")) {
+      return <Activity className="h-4 w-4 text-purple-400" />;
     }
     return <Activity className="h-4 w-4 text-neutral-400" />;
   };
@@ -57,6 +118,24 @@ export function ActivityTimeline({
       setIsTimelineCollapsed(true);
     }
   }, [isLoading, processedEvents]);
+
+  const renderEventData = (data: any) => {
+    if (typeof data === "string") {
+      // Check if the string contains markdown-like content
+      if (data.includes("**") || data.includes("\n") || data.includes("#")) {
+        return (
+          <ReactMarkdown components={timelineMdComponents}>
+            {data}
+          </ReactMarkdown>
+        );
+      }
+      return <p className="text-xs text-neutral-300 leading-relaxed">{data}</p>;
+    } else if (Array.isArray(data)) {
+      return <p className="text-xs text-neutral-300 leading-relaxed">{(data as string[]).join(", ")}</p>;
+    } else {
+      return <p className="text-xs text-neutral-300 leading-relaxed">{JSON.stringify(data)}</p>;
+    }
+  };
 
   return (
     <Card className="border-none rounded-lg bg-neutral-700 max-h-96">
@@ -106,13 +185,9 @@ export function ActivityTimeline({
                       <p className="text-sm text-neutral-200 font-medium mb-0.5">
                         {eventItem.title}
                       </p>
-                      <p className="text-xs text-neutral-300 leading-relaxed">
-                        {typeof eventItem.data === "string"
-                          ? eventItem.data
-                          : Array.isArray(eventItem.data)
-                          ? (eventItem.data as string[]).join(", ")
-                          : JSON.stringify(eventItem.data)}
-                      </p>
+                      <div className="text-xs text-neutral-300">
+                        {renderEventData(eventItem.data)}
+                      </div>
                     </div>
                   </div>
                 ))}

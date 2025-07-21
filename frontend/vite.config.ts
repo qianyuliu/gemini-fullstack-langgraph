@@ -13,8 +13,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000, // Use different port to avoid conflicts
-    host: 'localhost', // Use localhost instead of 0.0.0.0
+    port: 8080, // Use higher port to avoid permission issues
+    host: '127.0.0.1', // Use IP address instead of localhost
     proxy: {
       // Proxy API requests to the backend server
       "/api": {

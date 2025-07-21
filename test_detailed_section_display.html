@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Section Display Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #262626;
+            color: #e5e5e5;
+            margin: 0;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #404040;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #525252;
+            border-radius: 6px;
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #f5f5f5;
+        }
+        .test-content {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #d4d4d4;
+        }
+        .markdown-content {
+            background-color: #404040;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #10b981;
+        }
+        .markdown-content strong {
+            color: #f5f5f5;
+            font-weight: 600;
+        }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            color: #f5f5f5;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .markdown-content ul, .markdown-content ol {
+            margin-left: 20px;
+        }
+        .markdown-content li {
+            margin-bottom: 3px;
+        }
+        .section-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        .status-research {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .status-direct {
+            background-color: #10b981;
+            color: white;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #374151;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #10b981;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Detailed Section Display Test - 详细章节显示</h1>
+        
+        <div class="test-section">
+            <div class="test-title">修改前：简单显示</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    Section 1/7: Processing<br>
+                    正在处理章节...<br><br>
+                    
+                    Section 2/7: Processing<br>
+                    正在处理章节...<br><br>
+                    
+                    Section 3/7: Processing<br>
+                    正在处理章节...
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">修改后：详细章节信息</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <h3>Section 1/7: 引言</h3>
+                    <strong>引言</strong> (2000字) <span class="section-status status-research">🔍 需研究</span><br><br>
+                    
+                    介绍研究背景和目标，阐述研究的重要性和现实意义，明确研究目标和范围。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 0/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Section 2/7: 文献综述</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <strong>文献综述</strong> (4000字) <span class="section-status status-research">🔍 需研究</span><br><br>
+                    
+                    系统梳理相关研究文献，分析现有研究成果和理论框架，识别研究空白和机会。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 1/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 14.3%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Section 3/7: 核心分析</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <strong>核心分析</strong> (6000字) <span class="section-status status-research">🔍 需研究</span><br><br>
+                    
+                    深入分析主要研究内容，运用理论框架和方法论，提供详细的数据分析和论证。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 2/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 28.6%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Section 4/7: 方法分析</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <strong>方法分析</strong> (3500字) <span class="section-status status-research">🔍 需研究</span><br><br>
+                    
+                    详细阐述研究方法、数据收集和分析技术，说明研究设计的科学性和可靠性。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 3/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 42.9%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Section 5/7: 结果讨论</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <strong>结果讨论</strong> (4500字) <span class="section-status status-research">🔍 需研究</span><br><br>
+                    
+                    呈现研究结果，深入讨论发现的意义，与现有理论进行对比分析。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 4/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 57.1%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Section 6/7: 应用与影响</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <strong>应用与影响</strong> (3000字) <span class="section-status status-research">🔍 需研究</span><br><br>
+                    
+                    探讨研究结果的实际应用价值，分析对相关领域的影响和潜在贡献。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 5/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 71.4%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Section 7/7: 总结与展望</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <strong>总结与展望</strong> (2000字) <span class="section-status status-direct">📝 直接生成</span><br><br>
+                    
+                    总结研究的主要发现和贡献，提出未来研究方向和展望。<br><br>
+                    
+                    <strong>处理状态：</strong> 正在生成内容...<br><br>
+                    
+                    <strong>进度：</strong> 6/7 章节已完成<br>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 85.7%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">改进效果对比</div>
+            <div class="test-content">
+                <div class="markdown-content">
+                    <h3>主要改进点：</h3>
+                    <ul>
+                        <li><strong>章节标题</strong>：显示具体的章节名称而不是"Processing"</li>
+                        <li><strong>章节描述</strong>：显示每个章节的详细描述和内容要求</li>
+                        <li><strong>字数信息</strong>：显示每个章节的目标字数</li>
+                        <li><strong>研究状态</strong>：区分需要研究的章节和直接生成的章节</li>
+                        <li><strong>处理状态</strong>：显示当前的处理阶段</li>
+                        <li><strong>进度跟踪</strong>：显示完成进度和可视化进度条</li>
+                    </ul>
+                    
+                    <h3>用户体验提升：</h3>
+                    <ul>
+                        <li>用户可以清楚了解每个章节的内容和要求</li>
+                        <li>实时了解处理进度和当前状态</li>
+                        <li>更好的视觉反馈和信息层次</li>
+                        <li>减少用户等待过程中的不确定性</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

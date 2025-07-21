@@ -13,6 +13,7 @@ export default function App() {
   const [historicalActivities, setHistoricalActivities] = useState<
     Record<string, ProcessedEvent[]>
   >({});
+  const [reportPlan, setReportPlan] = useState<any>(null); // Store report plan for section details
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const hasFinalizeEventOccurredRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,26 +80,62 @@ export default function App() {
       } else if (event.generate_report_plan) {
         const plan = event.generate_report_plan.report_plan;
         const sectionCount = plan?.sections?.length || 0;
+        
+        // Store the report plan for later use
+        setReportPlan(plan);
+        
+        // Create detailed section outline with better formatting
+        let sectionOutline = "";
+        if (plan?.sections && plan.sections.length > 0) {
+          sectionOutline = "**章节大纲：**\n\n";
+          plan.sections.forEach((section: any, index: number) => {
+            const sectionNumber = index + 1;
+            const wordCount = section.word_count_target || 0;
+            const researchStatus = section.requires_research ? "🔍 需研究" : "📝 直接生成";
+            sectionOutline += `${sectionNumber}. **${section.name}** (${wordCount}字) ${researchStatus}\n   ${section.description}\n\n`;
+          });
+        }
+        
         processedEvent = {
           title: "Report Planning",
-          data: `Generated report plan with ${sectionCount} sections targeting ${plan?.total_word_count_target || 'unknown'} words`,
+          data: `Generated report plan with ${sectionCount} sections targeting ${plan?.total_word_count_target || 'unknown'} words\n\n${sectionOutline}`,
         };
       } else if (event.process_section) {
         const sectionIndex = event.process_section.current_section_index;
         const totalSections = event.process_section.total_sections;
-        const sectionName = event.process_section.section_name;
-        const sectionDescription = event.process_section.section_description;
         const completedCount = event.process_section.sections_completed_count || 0;
         
+        // Get current section details from stored report plan
+        let currentSectionInfo = "正在处理章节...";
+        let currentSectionName = "Processing";
+        
+        if (reportPlan && reportPlan.sections && sectionIndex < reportPlan.sections.length) {
+          const currentSection = reportPlan.sections[sectionIndex];
+          currentSectionName = currentSection.name;
+          
+          const wordCount = currentSection.word_count_target || 0;
+          const researchStatus = currentSection.requires_research ? "🔍 需研究" : "📝 直接生成";
+          
+          currentSectionInfo = `**${currentSection.name}** (${wordCount}字) ${researchStatus}\n\n${currentSection.description}\n\n**处理状态：** 正在生成内容...\n\n**进度：** ${completedCount}/${totalSections} 章节已完成`;
+        }
+        
         processedEvent = {
-          title: `Section ${sectionIndex + 1}/${totalSections}: ${sectionName || 'Processing'}`,
-          data: `Completed: ${completedCount}/${totalSections} sections. Current: ${sectionDescription || 'Working...'}`,
+          title: `Section ${sectionIndex + 1}/${totalSections}: ${currentSectionName}`,
+          data: currentSectionInfo,
         };
       } else if (event.compile_report) {
         const completedSections = event.compile_report.completed_sections?.length || 0;
+        const finalReport = event.compile_report.final_report;
+        
+        let compileInfo = `Compiling final report from ${completedSections} completed sections`;
+        if (finalReport) {
+          const wordCount = finalReport.length;
+          compileInfo += `\n\n**报告统计：**\n- 总字符数：${wordCount.toLocaleString()}\n- 完成章节：${completedSections}`;
+        }
+        
         processedEvent = {
           title: "Compiling Final Report",
-          data: `Compiling final report from ${completedSections} completed sections`,
+          data: compileInfo,
         };
         hasFinalizeEventOccurredRef.current = true;
       }
@@ -146,6 +183,7 @@ export default function App() {
     (submittedInputValue: string, effort: string, model: string, ragResources?: string[]) => {
       if (!submittedInputValue.trim()) return;
       setProcessedEventsTimeline([]);
+      setReportPlan(null); // Reset report plan for new request
       hasFinalizeEventOccurredRef.current = false;
 
       // convert effort to, initial_search_query_count and max_research_loops
