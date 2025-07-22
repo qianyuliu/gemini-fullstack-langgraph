@@ -5,11 +5,15 @@
 ## 支持的LLM提供商
 
 ### 1. DeepSeek (推荐)
-- **优点**: 成本低、速度快、性能优异
+- **优点**: 成本低、速度快、性能优异、支持多种专业模型
 - **配置**:
   ```bash
   DEEPSEEK_API_KEY="sk-your-deepseek-api-key"
+  DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"  # 可选，默认为官方API
   ```
+- **支持的模型**:
+  - `deepseek-chat`: 通用对话模型 (DeepSeek-V3-0324)
+  - `deepseek-reasoner`: 推理模型 (DeepSeek-R1-0528)
 - **获取API密钥**: 访问 [DeepSeek 官网](https://www.deepseek.com/)
 
 ### 2. 智谱AI
@@ -93,6 +97,12 @@
 ```bash
 # LLM配置
 DEEPSEEK_API_KEY="sk-your-deepseek-api-key"
+DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
+
+# 可选：指定具体模型
+QUERY_GENERATOR_MODEL="deepseek-chat"      # 查询生成
+REFLECTION_MODEL="deepseek-reasoner"       # 推理反思
+ANSWER_MODEL="deepseek-chat"               # 答案生成
 
 # 搜索引擎配置
 SEARCH_ENGINE="tavily"

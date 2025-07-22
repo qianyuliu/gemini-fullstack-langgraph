@@ -50,15 +50,24 @@ class LLMFactory:
     
     @staticmethod
     def _create_deepseek_llm(model_name: str, temperature: float, max_retries: int, **kwargs) -> ChatOpenAI:
-        """Create DeepSeek LLM instance."""
+        """Create DeepSeek LLM instance.
+        
+        DeepSeek 官方文档：
+        - deepseek-chat 模型指向 DeepSeek-V3-0324
+        - deepseek-reasoner 模型指向 DeepSeek-R1-0528
+        - 支持 OpenAI 兼容模式：https://api.deepseek.com/v1
+        """
         api_key = os.getenv("DEEPSEEK_API_KEY")
         if not api_key:
             raise ValueError("DEEPSEEK_API_KEY environment variable is required for DeepSeek models")
         
+        # 支持自定义 base_url，默认为官方 API
+        base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
+        
         return ChatOpenAI(
             model=model_name,
             api_key=api_key,
-            base_url="https://api.deepseek.com",
+            base_url=base_url,
             temperature=temperature,
             max_retries=max_retries,
             **kwargs
@@ -138,8 +147,8 @@ def get_available_models():
     # Check DeepSeek
     if os.getenv("DEEPSEEK_API_KEY"):
         models.extend([
-            {"id": "deepseek-chat", "name": "DeepSeek Chat", "provider": "deepseek"},
-            {"id": "deepseek-coder", "name": "DeepSeek Coder", "provider": "deepseek"},
+            {"id": "deepseek-chat", "name": "DeepSeek Chat (V3-0324)", "provider": "deepseek"},
+            {"id": "deepseek-reasoner", "name": "DeepSeek Reasoner (R1-0528)", "provider": "deepseek"},
         ])
     
     # Check 智谱AI
