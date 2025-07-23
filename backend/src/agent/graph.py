@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+import time
 
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
@@ -435,6 +435,17 @@ def finalize_answer(state: OverallState, config: RunnableConfig) -> Dict[str, An
     # Extract content from the response
     if hasattr(result, 'content'):
         final_answer = result.content
+        # 多轮对话确保大模型输出完整而非因为长度截断
+        finish_reason = result.response_metadata["finish_reason"]
+        # responseid = result.id #豆包大模型多轮对话需要
+        while finish_reason == "length": # 如果正常结束该值为stop
+            print(f"发现未完待续，续写 ...")
+            # continuation = llm.invoke([HumanMessage("请继续上文接着写")], previous_response_id=responseid) #豆包大模型多轮对话需要
+            continuation = llm.invoke("请继续上文接着写，\n 上文：" + final_answer)
+            final_answer = final_answer + "\n" + continuation.content
+            finish_reason = continuation.response_metadata["finish_reason"]
+            # responseid = continuation.id #豆包大模型多轮对话需要
+            time.sleep(2)  # 避免 API 限速
     else:
         final_answer = str(result)
 
